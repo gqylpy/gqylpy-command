@@ -13,7 +13,7 @@
 ─██████████████─████████████████───────██████───────██████████████─██████───────────────██████───────
 ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-Copyright © 2022 GQYLPY. 竹永康 <gqylpy@outlook.com>
+Copyright (c) 2022 GQYLPY <http://gqylpy.com>. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-__version__ = 1, 0, 'dev1'
+__version__ = 1, 0, 'alpha2'
+__author__ = '竹永康 <gqylpy@outlook.com>'
+__source__ = 'https://github.com/gqylpy/gqylpy-datastruct'
 
 
 class GqylpyCommand:
@@ -42,12 +44,12 @@ class GqylpyCommand:
             cmd: str,
             *,
             timeout: int = None,
-            ignore_timeout: bool = False
+            ignore_timeout_error: bool = False
     ):
         """
-        @param cmd:            Command string.
-        @param timeout:        Command timeout, Default never times out.
-        @param ignore_timeout: If true, no exception is thrown after naming timeout.
+        @param cmd:                  Command string.
+        @param timeout:              Command timeout, Default never times out.
+        @param ignore_timeout_error: If true, no exception is thrown after naming timeout.
         """
 
     def raise_if_error(self):
@@ -89,75 +91,6 @@ class GqylpyCommand:
 
     def table_output_to_dict(self, split: str = None) -> list:
         return table2dict(self.output_else_raise, split=split)
-
-
-def raise_if_error(cmd: str, *, timeout: int = None):
-    GqylpyCommand(cmd, timeout=timeout).raise_if_error()
-
-
-def code(cmd: str, *, timeout: int = None) -> int:
-    return GqylpyCommand(cmd, timeout=timeout).code
-
-
-def status(cmd: str, *, timeout: int = None) -> bool:
-    return GqylpyCommand(cmd, timeout=timeout).status
-
-
-def output(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).output
-
-
-def raw_output(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).raw_output
-
-
-def code_output(cmd: str, *, timeout: int = None) -> 'Tuple[int, str]':
-    return GqylpyCommand(cmd, timeout=timeout).code_output
-
-
-def status_output(cmd: str, *, timeout: int = None) -> 'Tuple[bool, str]':
-    return GqylpyCommand(cmd, timeout=timeout).status_output
-
-
-def output_else_raise(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).output_else_raise
-
-
-def output_else_define(
-        cmd: str,
-        *,
-        define: 'Any' = None,
-        timeout: int = None
-) -> 'Any':
-    return GqylpyCommand(
-        cmd, timeout=timeout
-    ).output_else_define(define)
-
-
-def contain_string(
-        cmd: str,
-        *,
-        string: str = None,
-        timeout: int = None
-) -> bool:
-    return GqylpyCommand(
-        cmd, timeout=timeout
-    ).contain_string(string)
-
-
-def output_if_contain_string_else_raise(
-        cmd: str,
-        *,
-        string: str = None,
-        timeout: int = None
-) -> str:
-    return GqylpyCommand(
-        cmd, timeout=timeout
-    ).output_if_contain_string_else_raise(string)
-
-
-def table_output_to_dict(cmd: str, *, timeout: int = None) -> list:
-    return GqylpyCommand(cmd, timeout=timeout).table_output_to_dict()
 
 
 def table2dict(table: str, *, split: str = None) -> list:

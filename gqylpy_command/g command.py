@@ -13,7 +13,7 @@
 ─██████████████─████████████████───────██████───────██████████████─██████───────────────██████───────
 ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-Copyright © 2022 GQYLPY. 竹永康 <gqylpy@outlook.com>
+Copyright (c) 2022 GQYLPY <http://gqylpy.com>. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from subprocess import check_output
-from subprocess import TimeoutExpired
-from subprocess import CalledProcessError
+from subprocess import check_output, TimeoutExpired, CalledProcessError
+
+import gqylpy_cache
 
 
-class GqylpyCommand:
+class GqylpyCommand(metaclass=gqylpy_cache):
     code = 0
 
     def __init__(
@@ -40,17 +40,23 @@ class GqylpyCommand:
             cmd: str,
             *,
             timeout: int = None,
-            ignore_timeout: bool = False
+            ignore_timeout_error: bool = False,
+            **kw
     ):
         try:
             self.raw_output: str = check_output(
-                cmd, timeout=timeout, shell=True,
-                universal_newlines=True, stderr=-2)
+                cmd,
+                timeout=timeout,
+                shell=True,
+                text=True,
+                stderr=-2,
+                **kw
+            )
         except CalledProcessError as e:
             self.raw_output: str = e.output
             self.code: int = e.returncode
         except TimeoutExpired as e:
-            if not ignore_timeout:
+            if not ignore_timeout_error:
                 raise e
             self.raw_output = ''
             self.code = 1
@@ -96,76 +102,13 @@ class GqylpyCommand:
         raise CommandError(f'({self.cmd}): "{self.output}"')
 
     def table_output_to_dict(self, split: str = None) -> list:
-        return table2dict(self.output_else_raise, split=split)
-
-
-def raise_if_error(cmd: str, *, timeout: int = None):
-    GqylpyCommand(cmd, timeout=timeout).raise_if_error()
-
-
-def code(cmd: str, *, timeout: int = None) -> int:
-    return GqylpyCommand(cmd, timeout=timeout).code
-
-
-def status(cmd: str, *, timeout: int = None) -> bool:
-    return GqylpyCommand(cmd, timeout=timeout).status
-
-
-def output(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).output
-
-
-def raw_output(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).raw_output
-
-
-def code_output(cmd: str, *, timeout: int = None) -> tuple:
-    return GqylpyCommand(cmd, timeout=timeout).code_output
-
-
-def status_output(cmd: str, *, timeout: int = None) -> tuple:
-    return GqylpyCommand(cmd, timeout=timeout).status_output
-
-
-def output_else_raise(cmd: str, *, timeout: int = None) -> str:
-    return GqylpyCommand(cmd, timeout=timeout).output_else_raise
-
-
-def output_else_define(cmd: str, *, define=None, timeout: int = None):
-    return GqylpyCommand(cmd, timeout=timeout).output_else_define(define)
-
-
-def contain_string(
-        cmd: str,
-        *,
-        string: str = None,
-        timeout: int = None) -> bool:
-    return GqylpyCommand(
-        cmd, timeout=timeout
-    ).contain_string(string)
-
-
-def output_if_contain_string_else_raise(
-        cmd: str,
-        *,
-        string: str = None,
-        timeout: int = None
-) -> str:
-    return GqylpyCommand(
-        cmd, timeout=timeout
-    ).output_if_contain_string_else_raise(string)
-
-
-def table_output_to_dict(cmd: str, *, timeout: int = None) -> list:
-    return GqylpyCommand(cmd, timeout=timeout).table_output_to_dict()
-
-
-def table2dict(table: str, *, split: str = None) -> list:
-    result = [[value.strip() for value in line.split(split)]
-              for line in table.splitlines()]
-    keys = [key.lower() for key in result[0]]
-    return [dict(zip(keys, values)) for values in result[1:]]
+        result = [
+            [value.strip() for value in line.split(split)]
+            for line in self.output_else_raise.splitlines()
+        ]
+        keys = [key.lower() for key in result[0]]
+        return [dict(zip(keys, values)) for values in result[1:]]
 
 
 class CommandError(Exception):
-    __module__ = 'e'
+    __module__ = 'builtins'
