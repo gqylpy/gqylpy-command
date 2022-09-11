@@ -106,3 +106,4 @@ ENV/
 conda-requirements.txt
 
 self_test.py
+version_parameter_difference.yaml

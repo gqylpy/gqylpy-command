@@ -27,32 +27,42 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-__version__ = 1, 0, 'alpha2'
+__version__ = 1, 0, 'alpha3'
 __author__ = '竹永康 <gqylpy@outlook.com>'
-__source__ = 'https://github.com/gqylpy/gqylpy-datastruct'
+__source__ = 'https://github.com/gqylpy/gqylpy-command'
 
 
 class GqylpyCommand:
-    """
-    Executes the incoming command directly at instantiation time.
-    """
-    code: int  # Command exit code.
-    raw_output: str  # Command output.
+    PIPE, STDOUT, DEVNULL = -1, -2, -3
 
     def __init__(
             self,
-            cmd: str,
-            *,
-            timeout: int = None,
-            ignore_timeout_error: bool = False
-    ):
-        """
-        @param cmd:                  Command string.
-        @param timeout:              Command timeout, Default never times out.
-        @param ignore_timeout_error: If true, no exception is thrown after naming timeout.
-        """
+            *cmdline,
 
-    def raise_if_error(self):
+            stdin:  'Optional[int]' = None,
+            stdout: 'Optional[int]' = None,
+            stderr: 'Optional[int]' = None,
+
+            shell:   bool = None,
+            cwd:     str  = None,
+            env:     dict = None,
+            bufsize: int  = None,
+
+            text:               bool = None,
+            universal_newlines: bool = None,
+
+            input:          'Union[bytes, str]' = None,
+            timeout:         float              = None,
+            ignore_timeout:  bool               = None,
+
+            **other_hardly_used_params
+    ):
+        self.cmd:    str                     = ''.join(cmdline)
+        self.code:   int                     = ...
+        self.stdout: Union[bytes, str, None] = ...
+        self.stderr: Union[bytes, str, None] = ...
+
+    def raise_if_error(self) -> 'NoReturn':
         if self.code != 0:
             raise CommandError
 
@@ -61,8 +71,8 @@ class GqylpyCommand:
         return self.code == 0
 
     @property
-    def output(self) -> str:
-        return process(self.raw_output)
+    def output(self) -> 'Union[bytes, str]':
+        return self.stdout + self.stderr
 
     @property
     def code_output(self) -> 'Tuple[int, str]':
@@ -73,43 +83,38 @@ class GqylpyCommand:
         return self.status, self.output
 
     @property
-    def output_else_raise(self) -> str:
-        if self.status:
-            return self.output
-        raise CommandError
+    def output_else_raise(self) -> 'Union[bytes, str]':
+        """Return output if the command
+        exitcode is 0 else raise CommandError.
+        """
+        self.raise_if_error()
+        return self.output
 
     def output_else_define(self, define: 'Any' = None) -> 'Any':
         return self.output if self.status else define
 
-    def contain_string(self, string: str) -> bool:
-        return string in self.raw_output
+    def contain(self, char: 'Union[bytes, str]') -> bool:
+        return char in self.output
 
-    def output_if_contain_string_else_raise(self, string: str) -> str:
-        if self.contain_string(string):
+    def contain_char_else_raise(self, char: 'Union[bytes, str]') -> 'NoReturn':
+        if char not in self.output:
+            raise CommandError
+
+    def output_if_contain_char_else_raise(self, char: 'Union[bytes, str]') -> 'str | bytes':
+        if self.contain(char):
             return self.output
         raise CommandError
 
     def table_output_to_dict(self, split: str = None) -> list:
-        return table2dict(self.output_else_raise, split=split)
+        """Used to turn the command output result with a title
+        into a dictionary, such as `kubectl get nodes`."""
 
 
-def table2dict(table: str, *, split: str = None) -> list:
-    """Used to turn the command output result with a title
-    into a dictionary, such as `kubectl get nodes`."""
-
-
-class _______G________Q________Y_______L_______P_______Y_______:
-    import sys
-
+class _xe6_xad_x8c_xe7_x90_xaa_xe6_x80_xa1_xe7_x8e_xb2_xe8_x90_x8d_xe4_xba_x91:
     __import__(f'{__name__}.g {__name__[7:]}')
-    gpack = sys.modules[__name__]
-    gcode = globals()[f'g {__name__[7:]}']
-
-    for gname in globals():
-        if gname[0] != '_' and hasattr(gcode, gname):
-            setattr(gpack, gname, getattr(gcode, gname))
+    globals()['GqylpyCommand'] = globals()[f'g {__name__[7:]}'].GqylpyCommand
 
 
 gcmd = GqylpyCommand
 
-from typing import Any, Tuple
+from typing import Any, Tuple, Union, Optional, NoReturn

@@ -1,5 +1,5 @@
 import setuptools
-import gqylpy_datastruct as g
+import gqylpy_command as g
 
 setuptools.setup(
     name=g.__name__,

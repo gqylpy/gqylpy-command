@@ -27,40 +27,87 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from subprocess import check_output, TimeoutExpired, CalledProcessError
+import sys
+import builtins
 
-import gqylpy_cache
+from subprocess import Popen, TimeoutExpired
+
+mswindows, bytes_output_end_sign, bytes_output_end_point = \
+    (True, b'\r\n', -2) if sys.platform[:3] == 'win' else (False, b'\n', -1)
 
 
-class GqylpyCommand(metaclass=gqylpy_cache):
-    code = 0
+class GqylpyCommand:
+    PIPE, STDOUT, DEVNULL = -1, -2, -3
 
     def __init__(
             self,
-            cmd: str,
-            *,
-            timeout: int = None,
-            ignore_timeout_error: bool = False,
-            **kw
+            *cmdline,
+
+            stdin:  int = PIPE,
+            stdout: int = PIPE,
+            stderr: int = PIPE,
+
+            shell:   bool = True,
+            cwd:     str  = None,
+            env:     dict = None,
+            bufsize: int  = -1,
+
+            text:               bool = True,
+            universal_newlines: bool = True,
+
+            input:         'bytes | str' = None,
+            timeout:        int          = None,
+            ignore_timeout: bool         = False,
+
+            **other_hardly_used_params
     ):
-        try:
-            self.raw_output: str = check_output(
-                cmd,
-                timeout=timeout,
-                shell=True,
-                text=True,
-                stderr=-2,
-                **kw
+        # That is maintained here for backwards compatibility. The parameters vary
+        # between versions, only one commonly used parameter is maintained here, in
+        # fact there are many more.
+        if not text and universal_newlines:
+            universal_newlines = False
+
+        if input is None:
+            # Explicitly passing input=None was previously equivalent to passing an
+            # empty string. That is maintained here for backwards compatibility.
+            input = '' if universal_newlines else b''
+        elif stdin is not self.PIPE:
+            raise ValueError(
+                'when the argument "input" is specified, '
+                'the argument "stdin" must be "PIPE(-1)".'
             )
-        except CalledProcessError as e:
-            self.raw_output: str = e.output
-            self.code: int = e.returncode
-        except TimeoutExpired as e:
-            if not ignore_timeout_error:
-                raise e
-            self.raw_output = ''
-            self.code = 1
-        self.cmd = cmd
+
+        with Popen(
+                cmdline, stdin=stdin, stdout=stdout, stderr=stderr,
+                shell=shell, cwd=cwd, env=env, bufsize=bufsize,
+                universal_newlines=universal_newlines,
+                **other_hardly_used_params
+        ) as process:
+            try:
+                self.stdout, self.stderr = process.communicate(input, timeout)
+            except TimeoutExpired as e:
+                process.terminate()
+                # Windows and other systems handle this differently.
+                if mswindows:
+                    e.stdout, e.stderr = process.communicate()
+                else:
+                    process.wait()
+                if not ignore_timeout:
+                    raise
+                self.code = 1
+                self.stdout = self.stderr = None
+            except:
+                process.terminate()
+                raise
+            else:
+                self.code = process.poll()
+
+        self.cmdline = cmdline
+        self.universal_newlines = universal_newlines
+
+    @property
+    def cmd(self) -> str:
+        return ''.join(self.cmdline)
 
     def raise_if_error(self):
         if self.code != 0:
@@ -71,10 +118,22 @@ class GqylpyCommand(metaclass=gqylpy_cache):
         return self.code == 0
 
     @property
-    def output(self) -> str:
-        if self.raw_output[-1:] == '\n':
-            return self.raw_output[:-1]
-        return self.raw_output
+    def output(self) -> 'str | bytes':
+        if self.universal_newlines:
+            output, end_sign, end_point = '', '\n', -1
+        else:
+            output, end_sign, end_point = \
+                b'', bytes_output_end_sign, bytes_output_end_point
+
+        if self.stdout:
+            output += self.stdout
+        if self.stderr:
+            output += self.stderr
+
+        if output and output[slice(end_point, None)] == end_sign:
+            output = output[:end_point]
+
+        return output
 
     @property
     def code_output(self) -> tuple:
@@ -85,21 +144,25 @@ class GqylpyCommand(metaclass=gqylpy_cache):
         return self.status, self.output
 
     @property
-    def output_else_raise(self) -> str:
-        if self.status:
-            return self.output
-        raise CommandError(f'({self.cmd}) {self.output}')
+    def output_else_raise(self) -> 'str | bytes':
+        self.raise_if_error()
+        return self.output
 
     def output_else_define(self, define=None):
         return self.output if self.status else define
 
-    def contain_string(self, string: str) -> bool:
-        return string in self.raw_output
+    def contain(self, char: 'str | bytes') -> bool:
+        return char in self.output
 
-    def output_if_contain_string_else_raise(self, string: str) -> str:
-        if self.contain_string(string):
-            return self.output
-        raise CommandError(f'({self.cmd}): "{self.output}"')
+    def contain_char_else_raise(self, char: 'str | bytes'):
+        if char not in self.output:
+            raise CommandError(f'({self.cmd}) {self.output}')
+
+    def output_if_contain_char_else_raise(self, char: 'str | bytes') -> 'str | bytes':
+        output = self.output
+        if char in output:
+            return output
+        raise CommandError(f'({self.cmd}) {self.output}')
 
     def table_output_to_dict(self, split: str = None) -> list:
         result = [
@@ -112,3 +175,6 @@ class GqylpyCommand(metaclass=gqylpy_cache):
 
 class CommandError(Exception):
     __module__ = 'builtins'
+
+
+builtins.CommandError = CommandError
