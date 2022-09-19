@@ -6,4 +6,15 @@
 
 # gqylpy-command
 
-> 
+> 调用系统命令，它是对内置库 subprocess 的二次封装。在 `gcmd` 对象中，提供了多种方法用于判断命令调用结果是否如期。
+
+`pip3 install gqylpy_command`
+
+```python
+from gqylpy_command import gcmd
+
+c = gcmd('hostname')
+
+status: bool = c.status
+output: str  = c.output
+```

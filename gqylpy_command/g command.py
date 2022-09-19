@@ -43,9 +43,9 @@ class GqylpyCommand:
             self,
             *cmdline,
 
-            stdin:  int = PIPE,
-            stdout: int = PIPE,
-            stderr: int = PIPE,
+            stdin:  int = -1,
+            stdout: int = -1,
+            stderr: int = -1,
 
             shell:   bool = True,
             cwd:     str  = None,
@@ -61,15 +61,16 @@ class GqylpyCommand:
 
             **other_hardly_used_params
     ):
-        # That is maintained here for backwards compatibility. The parameters vary
-        # between versions, only one commonly used parameter is maintained here, in
-        # fact there are many more.
+        # That is maintained here for backwards compatibility. The parameters
+        # vary  between versions, only one commonly used parameter is maintained
+        # here, in  fact there are many more.
         if not text and universal_newlines:
             universal_newlines = False
 
         if input is None:
-            # Explicitly passing input=None was previously equivalent to passing an
-            # empty string. That is maintained here for backwards compatibility.
+            # Explicitly passing input=None was previously equivalent
+            # to passing an empty string. That is maintained here for
+            # backwards compatibility.
             input = '' if universal_newlines else b''
         elif stdin is not self.PIPE:
             raise ValueError(
@@ -95,7 +96,8 @@ class GqylpyCommand:
                 if not ignore_timeout:
                     raise
                 self.code = 1
-                self.stdout = self.stderr = None
+                self.stdout = None
+                self.stderr = None
             except:
                 process.terminate()
                 raise
@@ -111,7 +113,7 @@ class GqylpyCommand:
 
     def raise_if_error(self):
         if self.code != 0:
-            raise CommandError(f'({self.cmd}) {self.output}')
+            raise CommandError(f'({self.cmd}): "{self.output}"')
 
     @property
     def status(self) -> bool:
@@ -156,21 +158,23 @@ class GqylpyCommand:
 
     def contain_char_else_raise(self, char: 'str | bytes'):
         if char not in self.output:
-            raise CommandError(f'({self.cmd}) {self.output}')
+            raise CommandError(f'({self.cmd}): "{self.output}"')
 
-    def output_if_contain_char_else_raise(self, char: 'str | bytes') -> 'str | bytes':
+    def output_if_contain_char_else_raise(
+            self, char: 'str | bytes'
+    ) -> 'str | bytes':
         output = self.output
         if char in output:
             return output
-        raise CommandError(f'({self.cmd}) {self.output}')
+        raise CommandError(f'({self.cmd}): "{self.output}"')
 
-    def table_output_to_dict(self, split: str = None) -> list:
+    def output2dict(self, *, split: str = None):
         result = [
             [value.strip() for value in line.split(split)]
             for line in self.output_else_raise.splitlines()
         ]
         keys = [key.lower() for key in result[0]]
-        return [dict(zip(keys, values)) for values in result[1:]]
+        return (dict(zip(keys, values)) for values in result[1:])
 
 
 class CommandError(Exception):
