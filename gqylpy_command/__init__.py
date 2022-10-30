@@ -27,7 +27,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-__version__ = 1, 0
+__version__ = 1, 1
 __author__ = '竹永康 <gqylpy@outlook.com>'
 __source__ = 'https://github.com/gqylpy/gqylpy-command'
 
@@ -100,7 +100,8 @@ class GqylpyCommand:
                                True, terminate the child process after the
                                timeout but not raise exception, default False.
 
-        @param **other_hardly_used_params: Other hardly used parameters.
+        @param **other_hardly_used_params: Other hardly used parameters, based
+                                           on "subprocess.Popen".
         """
         self.cmd:    str                     = ''.join(cmdline)
         self.code:   int                     = ...  # command exitcode
@@ -127,7 +128,6 @@ class GqylpyCommand:
     def status_output(self) -> 'Tuple[bool, str]':
         return self.status, self.output
 
-    @property
     def output_else_raise(self) -> 'Union[bytes, str]':
         self.raise_if_error()
         return self.output

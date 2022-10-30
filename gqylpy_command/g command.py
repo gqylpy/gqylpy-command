@@ -33,7 +33,7 @@ import builtins
 from subprocess import Popen, TimeoutExpired
 
 mswindows, bytes_output_end_sign, bytes_output_end_point = \
-    (True, b'\r\n', -2) if sys.platform[:3] == 'win' else (False, b'\n', -1)
+    (True, b'\r\n', -2) if sys.platform == 'win32' else (False, b'\n', -1)
 
 
 class GqylpyCommand:
@@ -68,9 +68,9 @@ class GqylpyCommand:
             universal_newlines = False
 
         if input is None:
-            # Explicitly passing input=None was previously equivalent
-            # to passing an empty string. That is maintained here for
-            # backwards compatibility.
+            # Explicitly passing input=None was previously equivalent to passing
+            # an empty string. That is maintained here for backwards
+            # compatibility.
             input = '' if universal_newlines else b''
         elif stdin is not self.PIPE:
             raise ValueError(
@@ -145,7 +145,6 @@ class GqylpyCommand:
     def status_output(self) -> tuple:
         return self.status, self.output
 
-    @property
     def output_else_raise(self) -> 'str | bytes':
         self.raise_if_error()
         return self.output
