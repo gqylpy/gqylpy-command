@@ -1,19 +1,21 @@
 """
-─────────────────────────────────────────────────────────────────────────────────────────────────────
-─██████████████─██████████████───████████──████████─██████─────────██████████████─████████──████████─
-─██░░░░░░░░░░██─██░░░░░░░░░░██───██░░░░██──██░░░░██─██░░██─────────██░░░░░░░░░░██─██░░░░██──██░░░░██─
-─██░░██████████─██░░██████░░██───████░░██──██░░████─██░░██─────────██░░██████░░██─████░░██──██░░████─
-─██░░██─────────██░░██──██░░██─────██░░░░██░░░░██───██░░██─────────██░░██──██░░██───██░░░░██░░░░██───
-─██░░██─────────██░░██──██░░██─────████░░░░░░████───██░░██─────────██░░██████░░██───████░░░░░░████───
-─██░░██──██████─██░░██──██░░██───────████░░████─────██░░██─────────██░░░░░░░░░░██─────████░░████─────
-─██░░██──██░░██─██░░██──██░░██─────────██░░██───────██░░██─────────██░░██████████───────██░░██───────
-─██░░██──██░░██─██░░██──██░░██─────────██░░██───────██░░██─────────██░░██───────────────██░░██───────
-─██░░██████░░██─██░░██████░░████───────██░░██───────██░░██████████─██░░██───────────────██░░██───────
-─██░░░░░░░░░░██─██░░░░░░░░░░░░██───────██░░██───────██░░░░░░░░░░██─██░░██───────────────██░░██───────
-─██████████████─████████████████───────██████───────██████████████─██████───────────────██████───────
-─────────────────────────────────────────────────────────────────────────────────────────────────────
+Call system command, it is a secondary encapsulation of the built-in library
+`subprocess`. In the `gcmd` instance, multiple methods are provided to determine
+whether the call result of the command is as expected.
 
-Copyright (c) 2022 GQYLPY <http://gqylpy.com>. All rights reserved.
+    >>> from gqylpy_command import gcmd
+
+    >>> c = gcmd('hostname')
+
+    >>> c.status_output
+    (True, 'Alpha')
+
+    @version: 1.1.1
+    @author: 竹永康 <gqylpy@outlook.com>
+    @source: https://github.com/gqylpy/gqylpy-command
+
+────────────────────────────────────────────────────────────────────────────────
+Copyright (c) 2022, 2023 GQYLPY <http://gqylpy.com>. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,33 +29,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-__version__ = 1, 1
-__author__ = '竹永康 <gqylpy@outlook.com>'
-__source__ = 'https://github.com/gqylpy/gqylpy-command'
+from typing import Optional, Union, Tuple, Generator, NoReturn, Any
 
 
-class GqylpyCommand:
+class gcmd:
     PIPE, STDOUT, DEVNULL = -1, -2, -3
 
     def __init__(
             self,
             *cmdline,
 
-            stdin:  'Union[int, None]' = PIPE,
-            stdout: 'Union[int, None]' = PIPE,
-            stderr: 'Union[int, None]' = PIPE,
+            stdin:  Optional[int] = PIPE,
+            stdout: Optional[int] = PIPE,
+            stderr: Optional[int] = PIPE,
 
-            shell:   bool = None,
-            cwd:     str  = None,
-            env:     dict = None,
-            bufsize: int  = None,
+            shell:   Optional[bool] = None,
+            cwd:     Optional[str]  = None,
+            env:     Optional[dict] = None,
+            bufsize: Optional[int]  = None,
 
-            text:               bool = None,
-            universal_newlines: bool = None,
+            text:               Optional[bool] = None,
+            universal_newlines: Optional[bool] = None,
 
-            input:          'Union[bytes, str]' = None,
-            timeout:        'Union[int, float]' = None,
-            ignore_timeout:  bool               = None,
+            input:           Optional[Union[str, bytes]] = None,
+            timeout:         Optional[Union[int, float]] = None,
+            ignore_timeout:  Optional[bool]              = None,
 
             **other_hardly_used_params
     ):
@@ -77,38 +77,38 @@ class GqylpyCommand:
                         path of the current Python process.
         @param env:     Define the ENV, can be used in the command. Indication:
                         system may reject environment variables.
-        @param bufsize: Supplied as the parameter "buffering" to the `io.open()`
+        @param bufsize: Supplied as the parameter `buffering` to the `io.open()`
                         function when creating the stdin/stdout/stderr pipe file
                         object.
 
         @param text:               If True, the output type is string, otherwise
                                    bytes.
-        @param universal_newlines: Same as parameter "text", this parameter is
+        @param universal_newlines: Same as parameter `text`, this parameter is
                                    provided for backward compatibility. use
-                                   parameter "text" is recommended.
+                                   parameter `text` is recommended.
 
         @param input:          Data sent to the child process executing the
                                command, default no data is send. If the
-                               parameter "text" is True, the type of data to be
+                               parameter `text` is True, the type of data to be
                                sent must be string, otherwise bytes.
         @param timeout:        Duration of waiting for the child process to
                                execute the command (in seconds), default
                                permanent. Terminate the child process after the
-                               timeout and raise exception "TimeoutExpired".
+                               timeout and raise exception `TimeoutExpired`.
         @param ignore_timeout: Used to ignore exception raised because of
-                               timeout, used with the parameter "timeout". If
+                               timeout, used with the parameter `timeout`. If
                                True, terminate the child process after the
                                timeout but not raise exception, default False.
 
         @param **other_hardly_used_params: Other hardly used parameters, based
-                                           on "subprocess.Popen".
+                                           on `subprocess.Popen`.
         """
         self.cmd:    str                     = ''.join(cmdline)
         self.code:   int                     = ...  # command exitcode
         self.stdout: Union[bytes, str, None] = ...  # command output
         self.stderr: Union[bytes, str, None] = ...  # command error output
 
-    def raise_if_error(self) -> 'NoReturn':
+    def raise_if_error(self) -> NoReturn:
         if not self.status:
             raise CommandError
 
@@ -117,39 +117,39 @@ class GqylpyCommand:
         return self.code == 0
 
     @property
-    def output(self) -> 'Union[bytes, str]':
+    def output(self) -> Union[bytes, str]:
         return self.stdout + self.stderr
 
     @property
-    def code_output(self) -> 'Tuple[int, str]':
+    def code_output(self) -> Tuple[int, str]:
         return self.code, self.output
 
     @property
-    def status_output(self) -> 'Tuple[bool, str]':
+    def status_output(self) -> Tuple[bool, str]:
         return self.status, self.output
 
-    def output_else_raise(self) -> 'Union[bytes, str]':
+    def output_else_raise(self) -> Union[bytes, str]:
         self.raise_if_error()
         return self.output
 
-    def output_else_define(self, define: 'Optional[Any]' = None) -> 'Any':
+    def output_else_define(self, define: Optional[Any] = None) -> Any:
         return self.output if self.status else define
 
-    def contain(self, char: 'Union[bytes, str]') -> bool:
+    def contain(self, char: Union[bytes, str]) -> bool:
         return char in self.output
 
-    def contain_char_else_raise(self, char: 'Union[bytes, str]') -> 'NoReturn':
+    def contain_char_else_raise(self, char: Union[bytes, str]) -> NoReturn:
         if not self.contain(char):
             raise CommandError
 
     def output_if_contain_char_else_raise(
-            self, char: 'Union[bytes, str]'
-    ) -> 'str | bytes':
+            self, char: Union[bytes, str]
+    ) -> Union[bytes, str]:
         if self.contain(char):
             return self.output
         raise CommandError
 
-    def output2dict(self, split: 'Optional[str]' = None) -> 'Generator':
+    def output2dict(self, split: Optional[str] = None) -> Generator:
         """Used to turn the command output result with a title
         into a dictionary, such as `kubectl get nodes`."""
 
@@ -158,10 +158,11 @@ PIPE, STDOUT, DEVNULL = -1, -2, -3
 
 
 class _xe6_xad_x8c_xe7_x90_xaa_xe6_x80_xa1_xe7_x8e_xb2_xe8_x90_x8d_xe4_xba_x91:
-    __import__(f'{__name__}.g {__name__[7:]}')
-    globals()['GqylpyCommand'] = globals()[f'g {__name__[7:]}'].GqylpyCommand
+    gcmd = __import__(
+        f'{__name__}.g {__name__[7:]}', fromlist=...
+    ).GqylpyCommand
 
+    gcmd.__name__   = 'gcmd'
+    gcmd.__module__ = __package__
 
-gcmd = GqylpyCommand
-
-from typing import Any, Tuple, Union, NoReturn, Generator, Optional
+    globals()['gcmd'] = gcmd
